@@ -39,10 +39,10 @@ void TelnetSession::sendLine(std::string data)
 {
     u_long iSendResult;
     // If is something is on the prompt, wipe it off
-    if (m_telnetServer->interactivePrompt() || m_buffer.length() > 0)
-    {
-        eraseLine();
-    }
+    // if (m_telnetServer->interactivePrompt() || m_buffer.length() > 0)
+    // {
+    //     eraseLine();
+    // }
 
     data.append("\r\n");
     iSendResult = (*m_sock_s->send)(m_socket, data.c_str(), (u_long)data.length(), 0);

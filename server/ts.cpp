@@ -14,7 +14,7 @@ void myConnected(SP_TelnetSession session)
 void myNewLine(SP_TelnetSession session, std::string line)
 {
     std::cout << "myNewLine got called with line: " << line << "\n";
-    session->sendLine("Copy that.");
+    session->sendLine(line.c_str());
 }
 
 int main()
@@ -37,9 +37,9 @@ int main()
         .send = send
     };
     // Create a terminal server which
-    auto ts = std::make_shared < TelnetServer >();
+    auto ts = std::make_shared < TelnetServer >(&sock);
     
-    ts->initialise(27015);
+    ts->initialise(8081);
     ts->connectedCallback(myConnected);
     ts->newLineCallback(myNewLine);
 
@@ -47,7 +47,7 @@ int main()
     do 
     {
         ts->update();
-        sleep(16);
+        sleep(2);
     } 
     while (true);
 

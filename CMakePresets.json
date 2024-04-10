@@ -10,7 +10,7 @@
             "name": "default",
             "description": "Default preset",
             "hidden": false,
-            "generator": "Ninja",
+            "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "YES",

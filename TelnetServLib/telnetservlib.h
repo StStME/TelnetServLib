@@ -131,7 +131,7 @@ constexpr int SOCKET_ERROR = -1;
 class TelnetSession : public std::enable_shared_from_this < TelnetSession >
 {
 public:
-    TelnetSession(socket_t ClientSocket, std::shared_ptr<TelnetServer> ts) : m_socket(ClientSocket), m_telnetServer(ts), m_sock_s(nullptr) 
+    TelnetSession(socket_t ClientSocket, std::shared_ptr<TelnetServer> ts, sock_s* sock_s) : m_socket(ClientSocket), m_telnetServer(ts), m_sock_s(sock_s) 
     {
         m_historyCursor = m_history.end();
     };
@@ -180,7 +180,7 @@ typedef std::function< void(SP_TelnetSession, std::string) > FPTR_NewLineCallbac
 class TelnetServer : public std::enable_shared_from_this < TelnetServer >
 {
 public:
-    TelnetServer() : m_initialised(false), m_promptString(""), m_sock_s(nullptr) {};
+    TelnetServer(sock_s* sock) : m_initialised(false), m_promptString(""), m_sock_s(sock) {};
 
     bool initialise(u_long listenPort, std::string promptString = "");
     void update();

@@ -76,13 +76,15 @@ void TelnetServer::acceptConnection()
 {
     socket_t ClientSocket = INVALID_SOCKET;
     ClientSocket = (*m_sock_s->accept)(m_listenSocket, NULL, NULL);
+    printf("Someone will maybe be connected...\n");
     if (ClientSocket == INVALID_SOCKET) {
         printf("accept failed with error: %i\n", ClientSocket);
         (*m_sock_s->shutdown)(m_listenSocket, 2); // and stop reception and transmission        return;
     }
     else
     {
-        SP_TelnetSession s = std::make_shared < TelnetSession >(ClientSocket, shared_from_this());
+        printf("sock accept was not -1. Cool! :)\n");
+        SP_TelnetSession s = std::make_shared < TelnetSession >(ClientSocket, shared_from_this(), m_sock_s);
         m_sessions.push_back(s);
         s->initialise();        
     }
@@ -97,8 +99,8 @@ void TelnetServer::update()
     timeval timeout;
     timeout.tv_sec = 0;  // Zero timeout (poll)
     timeout.tv_usec = 0;
-
-    if ((*m_sock_s->select)(m_listenSocket, &readSet, NULL, NULL, &timeout) == 1)
+    int selected = (*m_sock_s->select)(4, &readSet, NULL, NULL, &timeout);
+    if (selected > 0)
     {
         // There is a connection pending, so accept it.
         acceptConnection();
