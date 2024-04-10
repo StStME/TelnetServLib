@@ -37,9 +37,9 @@ of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the FreeBSD Project.
 */
 
-#include <winsock2.h>
-#include <windows.h>
-#include <ws2tcpip.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
 #include <string>
 #include <memory>
 #include <vector>
@@ -95,11 +95,36 @@ const std::string ANSI_ARROW_LEFT("\x1b\x5b\x44");
 
 const std::string TELNET_ERASE_LINE      ("\xff\xf8");
 
+typedef int socket_t;
+struct addrinfo;
+
+typedef int (*Shutdown)(int, int);
+typedef int (*Socket)(int, int, int);  
+typedef int (*Getaddrinfo)(const char*, const char*, const addrinfo*, addrinfo**);
+typedef int (*Freeaddrinfo)(addrinfo*); 
+typedef int (*Accept)(int, sockaddr*, socklen_t*);
+typedef int (*Listen)(int, int);
+typedef int (*Select)(int, fd_set*, fd_set*, fd_set*, timeval*);
+typedef int (*Bind)(int, const sockaddr*, int);
+
+typedef struct sock_s {
+    Shutdown shutdown = nullptr;
+    Socket socket = nullptr;
+    Getaddrinfo getaddrinfo = nullptr;
+    Freeaddrinfo freeaddrinfo = nullptr;
+    Accept accept = nullptr;
+    Listen listen = nullptr;
+    Select select = nullptr;
+    Bind bind = nullptr;
+} sock_s;
+
+constexpr socket_t INVALID_SOCKET = -1; 
+
 
 class TelnetSession : public std::enable_shared_from_this < TelnetSession >
 {
 public:
-    TelnetSession(SOCKET ClientSocket, std::shared_ptr<TelnetServer> ts) : m_socket(ClientSocket), m_telnetServer(ts) 
+    TelnetSession(socket_t ClientSocket, std::shared_ptr<TelnetServer> ts) : m_socket(ClientSocket), m_telnetServer(ts), m_sock_s(nullptr) 
     {
         m_historyCursor = m_history.end();
     };
@@ -126,11 +151,13 @@ private:
     static std::vector<std::string> getCompleteLines(std::string &buffer);  
 
 private:
-    SOCKET m_socket;                // The Winsock socket
+    socket_t m_socket;                // The socket
     std::shared_ptr<TelnetServer> m_telnetServer; // Parent TelnetServer class
     std::string m_buffer;           // Buffer of input data (mid line)
     std::list<std::string>           m_history;  // A history of all completed commands
     std::list<std::string>::iterator m_historyCursor;
+    sock_s* m_sock_s;
+
 
 friend TelnetServer;
 };
@@ -141,10 +168,12 @@ typedef std::vector < SP_TelnetSession > VEC_SP_TelnetSession;
 typedef std::function< void(SP_TelnetSession) >              FPTR_ConnectedCallback;
 typedef std::function< void(SP_TelnetSession, std::string) > FPTR_NewLineCallback;
 
+
+
 class TelnetServer : public std::enable_shared_from_this < TelnetServer >
 {
 public:
-    TelnetServer() : m_initialised(false), m_promptString("") {};
+    TelnetServer() : m_initialised(false), m_promptString(""), m_sock_s(nullptr) {};
 
     bool initialise(u_long listenPort, std::string promptString = "");
     void update();
@@ -168,10 +197,11 @@ private:
 
 private:
     u_long m_listenPort;
-    SOCKET m_listenSocket;
+    socket_t m_listenSocket;
     VEC_SP_TelnetSession m_sessions;
     bool   m_initialised;
     std::string m_promptString;                     // A string that denotes the current prompt
+    sock_s* m_sock_s;
 
 protected:
     FPTR_ConnectedCallback m_connectedCallback;     // Called after the telnet session is initialised. function(SP_TelnetSession) {}
