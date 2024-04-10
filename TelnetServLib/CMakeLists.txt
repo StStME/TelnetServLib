@@ -1,6 +1,6 @@
 
 # add the executable
-add_library(TelnetServerLib SHARED
+add_library(TelnetServerLib STATIC
     telnetservlib.cpp
     telnetsession.cpp
 )

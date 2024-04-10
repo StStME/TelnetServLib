@@ -101,14 +101,14 @@ struct addrinfo;
 typedef int (*Shutdown)(int, int);
 typedef int (*Socket)(int, int, int);  
 typedef int (*Getaddrinfo)(const char*, const char*, const addrinfo*, addrinfo**);
-typedef int (*Freeaddrinfo)(addrinfo*); 
+typedef void (*Freeaddrinfo)(addrinfo*); 
 typedef int (*Accept)(int, sockaddr*, socklen_t*);
 typedef int (*Listen)(int, int);
 typedef int (*Select)(int, fd_set*, fd_set*, fd_set*, timeval*);
-typedef int (*Bind)(int, const sockaddr*, int);
+typedef int (*Bind)(int, const sockaddr*, unsigned int);
 typedef int (*Close)(int);
-typedef int (*Recv)(int, void*, size_t, int);
-typedef int (*Send)(int, const void*, size_t, int);
+typedef ssize_t (*Recv)(int, void*, size_t, int);
+typedef ssize_t (*Send)(int, const void*, size_t, int);
 
 typedef struct sock_s {
     Shutdown shutdown = nullptr;

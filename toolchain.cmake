@@ -1,0 +1,1 @@
+set(CMAKE_CXX_COMPILE_FLAGS "-g")
