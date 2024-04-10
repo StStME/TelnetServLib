@@ -15,12 +15,12 @@ void TelnetSession::sendPromptAndBuffer()
 {
     // Output the prompt
     u_long iSendResult;
-    iSendResult = send(m_socket, m_telnetServer->promptString().c_str(), (u_long)m_telnetServer->promptString().length(), 0);
+    iSendResult = (*m_sock_s->send)(m_socket, m_telnetServer->promptString().c_str(), (u_long)m_telnetServer->promptString().length(), 0);
 
     if (m_buffer.length() > 0)
     {
         // resend the buffer
-        iSendResult = send(m_socket, m_buffer.c_str(), (u_long)m_buffer.length(), 0);
+        iSendResult = (*m_sock_s->send)(m_socket, m_buffer.c_str(), (u_long)m_buffer.length(), 0);
     }
 }
 
@@ -28,11 +28,11 @@ void TelnetSession::eraseLine()
 {
     u_long iSendResult;
     // send an erase line       
-    iSendResult = send(m_socket, ANSI_ERASE_LINE.c_str(), (u_long)ANSI_ERASE_LINE.length(), 0);
+    iSendResult = (*m_sock_s->send)(m_socket, ANSI_ERASE_LINE.c_str(), (u_long)ANSI_ERASE_LINE.length(), 0);
 
     // Move the cursor to the beginning of the line
     std::string moveBack = "\x1b[80D";
-    iSendResult = send(m_socket, moveBack.c_str(), (u_long)moveBack.length(), 0);
+    iSendResult = (*m_sock_s->send)(m_socket, moveBack.c_str(), (u_long)moveBack.length(), 0);
 }
 
 void TelnetSession::sendLine(std::string data)
@@ -45,7 +45,7 @@ void TelnetSession::sendLine(std::string data)
     }
 
     data.append("\r\n");
-    iSendResult = send(m_socket, data.c_str(), (u_long)data.length(), 0);
+    iSendResult = (*m_sock_s->send)(m_socket, data.c_str(), (u_long)data.length(), 0);
 
     if (m_telnetServer->interactivePrompt())
         sendPromptAndBuffer();
@@ -56,14 +56,14 @@ void TelnetSession::closeClient()
     u_long iResult;
 
     // attempt to cleanly shutdown the connection since we're done
-    iResult = shutdown(m_socket, SD_SEND);
+    iResult = (*m_sock_s->shutdown)(m_socket, 2);
     if (iResult == SOCKET_ERROR) {
-        printf("shutdown failed with error: %d\n", WSAGetLastError());
+        printf("shutdown failed with error: %li\n", iResult);
         return;
     }
 
     // cleanup
-    closesocket(m_socket);
+    (*m_sock_s->close)(m_socket);
 }
 
 void TelnetSession::echoBack(char * buffer, u_long length)
@@ -76,44 +76,32 @@ void TelnetSession::echoBack(char * buffer, u_long length)
         return;
 
     u_long iSendResult;
-    iSendResult = send(m_socket, buffer, length, 0);
+    iSendResult = (*m_sock_s->send)(m_socket, buffer, length, 0);
 
-    if (iSendResult == SOCKET_ERROR && iSendResult != WSAEWOULDBLOCK) {
-        printf("Send failed with Winsock error: %d\n", WSAGetLastError());
+    if (iSendResult == SOCKET_ERROR) {
+        printf("Send failed with sock error: %li\n", iSendResult);
         std::cout << "Closing session and socket.\r\n";
-        closesocket(m_socket);
+        (*m_sock_s->close)(m_socket); // TODO: Replace with shutdown
         return;
     }
 }
 
 void TelnetSession::initialise()
 {
-    // get details of connection
-    SOCKADDR_IN client_info = { 0 };
-    int addrsize = sizeof(client_info);
-    getpeername(m_socket, (struct sockaddr*)&client_info, &addrsize);
-
-    char ip[16];
-    inet_ntop(AF_INET, &client_info.sin_addr, &ip[0], 16);
-
-    std::cout << "Client " << ip << " connected...\n";
-
-    // Set the connection to be non-blocking
-    u_long iMode = 1;
-    ioctlsocket(m_socket, FIONBIO, &iMode);
+    std::cout << "Client connected...\n";
 
     // Set NVT mode to say that I will echo back characters.
     u_long iSendResult;
     unsigned char willEcho[3] = { 0xff, 0xfb, 0x01 };
-    iSendResult = send(m_socket, (char *)willEcho, 3, 0);
+    iSendResult = (*m_sock_s->send)(m_socket, (char *)willEcho, 3, 0);
 
     // Set NVT requesting that the remote system not/dont echo back characters
     unsigned char dontEcho[3] = { 0xff, 0xfe, 0x01 };
-    iSendResult = send(m_socket, (char *)dontEcho, 3, 0);
+    iSendResult = (*m_sock_s->send)(m_socket, (char *)dontEcho, 3, 0);
 
     // Set NVT mode to say that I will supress go-ahead. Stops remote clients from doing local linemode.
     unsigned char willSGA[3] = { 0xff, 0xfb, 0x03 };
-    iSendResult = send(m_socket, (char *)willSGA, 3, 0);
+    iSendResult = (*m_sock_s->send)(m_socket, (char *)willSGA, 3, 0);
 
     if (m_telnetServer->connectedCallback())
         m_telnetServer->connectedCallback()(shared_from_this());
@@ -206,7 +194,7 @@ bool TelnetSession::processCommandHistory(std::string &buffer)
 
             // Issue a cursor command to counter it
             u_long iSendResult;
-            iSendResult = send(m_socket, ANSI_ARROW_DOWN.c_str(), (u_long)ANSI_ARROW_DOWN.length(), 0);
+            iSendResult = (*m_sock_s->send)(m_socket, ANSI_ARROW_DOWN.c_str(), (u_long)ANSI_ARROW_DOWN.length(), 0);
             return true;
         }
         if (buffer.find(ANSI_ARROW_DOWN) != std::string::npos && m_history.size() > 0)
@@ -219,7 +207,7 @@ bool TelnetSession::processCommandHistory(std::string &buffer)
 
             // Issue a cursor command to counter it
             u_long iSendResult;
-            iSendResult = send(m_socket, ANSI_ARROW_UP.c_str(), (u_long)ANSI_ARROW_UP.length(), 0);
+            iSendResult = (*m_sock_s->send)(m_socket, ANSI_ARROW_UP.c_str(), (u_long)ANSI_ARROW_UP.length(), 0);
             return true;
         }
         if (buffer.find(ANSI_ARROW_LEFT) != std::string::npos || buffer.find(ANSI_ARROW_RIGHT) != std::string::npos)
@@ -257,17 +245,17 @@ void TelnetSession::update()
     char recvbuf[DEFAULT_BUFLEN];
     u_long  recvbuflen = DEFAULT_BUFLEN;
 
-    readBytes = recv(m_socket, recvbuf, recvbuflen, 0);
+    readBytes = (*m_sock_s->recv)(m_socket, recvbuf, recvbuflen, 0);
 
-    // Check for errors from the read
-    int error = WSAGetLastError();
-    if (error != WSAEWOULDBLOCK && error != 0)
-    {
-        std::cout << "Receive failed with Winsock error code: " << error << "\r\n";
-        std::cout << "Closing session and socket.\r\n";
-        closesocket(m_socket);
-        return;
-    }
+    // // Check for errors from the read
+    // int error = WSAGetLastError();
+    // if (error != WSAEWOULDBLOCK && error != 0)
+    // {
+    //     std::cout << "Receive failed with Winsock error code: " << error << "\r\n";
+    //     std::cout << "Closing session and socket.\r\n";
+    //     closesocket(m_socket);
+    //     return;
+    // }
 
     if (readBytes > 0) {
         // Echo it back to the sender

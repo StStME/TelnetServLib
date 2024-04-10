@@ -106,6 +106,9 @@ typedef int (*Accept)(int, sockaddr*, socklen_t*);
 typedef int (*Listen)(int, int);
 typedef int (*Select)(int, fd_set*, fd_set*, fd_set*, timeval*);
 typedef int (*Bind)(int, const sockaddr*, int);
+typedef int (*Close)(int);
+typedef int (*Recv)(int, void*, size_t, int);
+typedef int (*Send)(int, const void*, size_t, int);
 
 typedef struct sock_s {
     Shutdown shutdown = nullptr;
@@ -116,9 +119,13 @@ typedef struct sock_s {
     Listen listen = nullptr;
     Select select = nullptr;
     Bind bind = nullptr;
+    Close close = nullptr;
+    Recv recv = nullptr;
+    Send send = nullptr;
 } sock_s;
 
 constexpr socket_t INVALID_SOCKET = -1; 
+constexpr int SOCKET_ERROR = -1; 
 
 
 class TelnetSession : public std::enable_shared_from_this < TelnetSession >
